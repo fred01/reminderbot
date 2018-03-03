@@ -8,7 +8,11 @@ import (
 	"cloud.google.com/go/firestore"
 )
 
+/**
+  Reminder - struct to hold 
+*/
 type Reminder struct {
+	id string
 	CronExpression string
 	Message string
 }
@@ -21,10 +25,12 @@ func New() (*RemindersDAO) {
 
 type RemindersDAO struct {
 	client *firestore.Client
+	ctx context.Context
 } 
 
 func (dao RemindersDAO) Init()  {
 	ctx := context.Background()
+	dao.ctx = ctx
 
 	sa := option.WithCredentialsFile("reminder-847c22e15205.json")
 	app, err := firebase.NewApp(ctx, nil, sa)
@@ -38,13 +44,11 @@ func (dao RemindersDAO) Init()  {
 	dao.client = client
 }
 
-func (dao RemindersDAO) StoreReminder()  {
-	
+func (dao RemindersDAO) StoreReminder(reminder Reminder)  {
+	dao.client.Collection("reminders").Doc(reminder.id).Set(dao.ctx, reminder)
 }
 
-func (dao RemindersDAO) ReadAllReminders() {
-	
-	
-	
+func (dao RemindersDAO) ReadAllReminders() (*firestore.DocumentIterator) {
+	return dao.client.Collection("reminders").Documents(dao.ctx)		
 }
 
