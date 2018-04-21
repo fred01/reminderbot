@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "srv.when";
+option java_outer_classname = "WhenService";
+
+package main;
+
+// The greeting service definition.
+service When {
+  // Sends a greeting
+  rpc Parse (WhenRequest) returns (WhenResponse) {}
+}
+
+// The request message containing the user's name.
+message WhenRequest {
+  string name = 1;
+}
+
+// The response message containing the greetings
+message WhenResponse {
+  string message = 1;
+}
