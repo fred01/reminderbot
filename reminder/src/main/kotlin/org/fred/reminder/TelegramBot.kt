@@ -11,7 +11,12 @@ import org.telegram.telegrambots.exceptions.TelegramApiException
 
 
 @Service
-class ReminderBot: TelegramLongPollingBot(DefaultBotOptions().apply { httpProxy = HttpHost("88.99.213.13", 3128) }) {
+class ReminderBot() : TelegramLongPollingBot(DefaultBotOptions().apply { httpProxy = HttpHost("88.99.213.13", 3128) }) {
+    final val client:WhenClient
+    init {
+        this.client = WhenClient("localhost", 50051)
+    }
+
     override fun getBotToken(): String = "521757582:AAFx9NWGSU81cxH2l4eFPXNWtEm0nTfqxsg"
 
     override fun getBotUsername(): String = "ReminderBot"
@@ -21,11 +26,11 @@ class ReminderBot: TelegramLongPollingBot(DefaultBotOptions().apply { httpProxy 
             return
         }
         if (update.hasMessage() && update.getMessage().hasText()) {
-
+            val parsed = client.parse(update.getMessage().text)
 
             val message = SendMessage() // Create a SendMessage object with mandatory fields
                     .setChatId(update.getMessage().chatId)
-                    .setText(update.getMessage().text)
+                    .setText(parsed)
             try {
                 execute<Message, SendMessage>(message) // Call method to send the message
             } catch (e: TelegramApiException) {

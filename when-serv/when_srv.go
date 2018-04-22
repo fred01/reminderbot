@@ -8,30 +8,53 @@ import (
 	"golang.org/x/net/context"
 )
 
-import pb "./generated"
+import (
+	pb "./generated"
+	"github.com/olebedev/when"
+	"github.com/olebedev/when/rules/common"
+	"github.com/olebedev/when/rules/ru"
+	"time"
+	"fmt"
+	"github.com/olebedev/when/rules/en"
+)
 
 const (
 	port = ":50051"
 )
 
 // server is used to implement helloworld.GreeterServer.
-type WhenServerImpl struct{}
+type WhenServerImpl struct {
+	w *when.Parser
+}
 
-func (ws *WhenServerImpl) Parse(context.Context, *pb.WhenRequest) (*pb.WhenResponse, error) {
-	var response = &pb.WhenResponse{Message:"Test return"}
-	return response, nil
+func (ws *WhenServerImpl) Parse(c context.Context, r *pb.WhenRequest) (*pb.WhenResponse, error) {
+	log.Printf("Request to parse string '%s'", r.Name)
+
+	parsed, err := ws.w.Parse(r.Name, time.Now())
+	if err != nil {
+		return &pb.WhenResponse{Message: fmt.Sprintf("ERROR: Cannot parse value ",err.Error())}, nil
+	} else {
+
+		s := fmt.Sprintf("%s/%s",parsed.Time.Format(time.RFC3339), r.Name[parsed.Index:parsed.Index+len(parsed.Text)])
+		return &pb.WhenResponse{Message: s}, nil
+	}
 }
 
 func main() {
+	log.Printf("Initializing server")
+	w := when.New(nil)
+	w.Add(common.All...)
+	w.Add(ru.All...)
+	w.Add(en.All...)
+
+	whenServer := &WhenServerImpl{w: w}
+
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-
-	pb.RegisterWhenServer(s, &WhenServerImpl{})
-	//pb.RegisterGreeterServer(s, &server{})
-	// Register reflection service on gRPC server.
+	pb.RegisterWhenServer(s, whenServer)
 	reflection.Register(s)
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
