@@ -32,11 +32,14 @@ func (ws *WhenServerImpl) Parse(c context.Context, r *pb.WhenRequest) (*pb.WhenR
 
 	parsed, err := ws.w.Parse(r.Name, time.Now())
 	if err != nil {
-		return &pb.WhenResponse{Message: fmt.Sprintf("ERROR: Cannot parse value ",err.Error())}, nil
+		return &pb.WhenResponse{Message: fmt.Sprintf("ERROR-1: Error while parsing [%s]",err.Error())}, nil
 	} else {
-
-		s := fmt.Sprintf("%s/%s",parsed.Time.Format(time.RFC3339), r.Name[parsed.Index:parsed.Index+len(parsed.Text)])
-		return &pb.WhenResponse{Message: s}, nil
+		if parsed != nil {
+			s := fmt.Sprintf("%s/%s",parsed.Time.Format(time.RFC3339), r.Name[parsed.Index:parsed.Index+len(parsed.Text)])
+			return &pb.WhenResponse{Message: s}, nil
+		} else {
+			return &pb.WhenResponse{Message: fmt.Sprintf("ERROR-2: String doesn't have date mentioned")}, nil
+		}
 	}
 }
 
