@@ -5,12 +5,10 @@ language: go
 services:
   - docker
 
-#go_import_path: example.org/pkg/foo
-
-before_script:
-   - cd when_srv
+go_import_path: when_srv
 
 script:
+   - cd when_srv
    - go build when_srv.go -o when_srv
 
 after_success: 
