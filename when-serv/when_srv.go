@@ -9,7 +9,7 @@ import (
 )
 
 import (
-	pb "./generated/"
+	pb "./generated"
 	"github.com/olebedev/when"
 	"github.com/olebedev/when/rules/common"
 	"github.com/olebedev/when/rules/ru"
