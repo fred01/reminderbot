@@ -9,7 +9,7 @@ import (
 )
 
 import (
-	pb "github.com/fred01/reminderbot/when_srv/generated"
+	pb "./generated/"
 	"github.com/olebedev/when"
 	"github.com/olebedev/when/rules/common"
 	"github.com/olebedev/when/rules/ru"
