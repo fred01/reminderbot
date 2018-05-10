@@ -5,7 +5,7 @@ language: go
 services:
   - docker
 
-go_import_path: when_srv
+go_import_path: github.com/fred01/reminderbot/when_srv
 
 script:
    - cd when_srv
