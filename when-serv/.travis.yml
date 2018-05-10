@@ -1,0 +1,11 @@
+sudo: required
+
+language: go
+
+services:
+  - docker
+
+script:
+   - docker build -t registry.fred.org.ru/when_srv:${TRAVIS_BUILD_NUMBER} .
+   - docker push registry.fred.org.ru/when_srv:${TRAVIS_BUILD_NUMBER}
+   
