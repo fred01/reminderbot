@@ -5,8 +5,10 @@ language: go
 services:
   - docker
 
-script:
-   - cd when_srv 
+before_script:
+   - cd when_srv
+
+after_success: 
    - docker build -t registry.fred.org.ru/when_srv:${TRAVIS_BUILD_NUMBER} .
    - docker push registry.fred.org.ru/when_srv:${TRAVIS_BUILD_NUMBER}
    
