@@ -8,8 +8,7 @@ services:
 
 
 script:
-   - ls -l
-   - cd when-srv
+   - cd when-serv
    - docker build -t registry.fred.org.ru/when_srv:${TRAVIS_BUILD_NUMBER} .
    
 after_success: 
