@@ -3,7 +3,7 @@ WORKDIR /go/src/when_srv
 RUN go get -d -v google.golang.org/grpc
 RUN go get -d -v github.com/olebedev/when
 COPY when_srv.go  .
-COPY generated .
+COPY generated ./generated
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o when_srv when_srv.go
 
 FROM alpine:latest

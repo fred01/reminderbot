@@ -1,6 +1,6 @@
 sudo: required
 
-language: bash
+language: generic
 
 
 services:
@@ -8,10 +8,9 @@ services:
 
 
 script:
-   - cd when_srv
-   - go build when_srv.go -o when_srv
-
-after_success: 
+   - cd reminderbot/when_srv
    - docker build -t registry.fred.org.ru/when_srv:${TRAVIS_BUILD_NUMBER} .
+   
+after_success: 
    - docker push registry.fred.org.ru/when_srv:${TRAVIS_BUILD_NUMBER}
    
