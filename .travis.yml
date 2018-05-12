@@ -8,6 +8,7 @@ services:
 
 
 script:
+   - ls -lRa *
    - cd reminderbot/when_srv
    - docker build -t registry.fred.org.ru/when_srv:${TRAVIS_BUILD_NUMBER} .
    
