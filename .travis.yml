@@ -10,7 +10,11 @@ services:
 script:
    - cd when-serv
    - docker build -t registry.fred.org.ru/when_srv:${TRAVIS_BUILD_NUMBER} .
+   - cd ../reminder
+   - docker build -t registry.fred.org.ru/reminderbot:${TRAVIS_BUILD_NUMBER} .
    
 after_success: 
    - docker push registry.fred.org.ru/when_srv:${TRAVIS_BUILD_NUMBER}
+   - docker push registry.fred.org.ru/reminderbot:${TRAVIS_BUILD_NUMBER}
+   
    
