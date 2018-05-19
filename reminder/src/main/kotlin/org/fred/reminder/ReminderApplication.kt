@@ -8,10 +8,6 @@ import org.telegram.telegrambots.ApiContextInitializer
 import org.telegram.telegrambots.TelegramBotsApi
 import org.telegram.telegrambots.exceptions.TelegramApiException
 
-
-
-
-
 @SpringBootApplication
 class ReminderApplication: CommandLineRunner {
     @Autowired lateinit var reminderBot: ReminderBot

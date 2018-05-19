@@ -3,7 +3,6 @@ package org.fred.reminder
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import io.grpc.StatusRuntimeException
-import org.springframework.stereotype.Service
 import srv.`when`.WhenGrpc
 import srv.`when`.WhenRequest
 import srv.`when`.WhenResponse
@@ -16,7 +15,7 @@ class WhenClient(host: String, port: Int) {
     private val logger = Logger.getLogger(WhenClient::class.java.name)
 
     private var channel: ManagedChannel
-    private var blockingStub:WhenGrpc.WhenBlockingStub
+    private var blockingStub: WhenGrpc.WhenBlockingStub
 
     fun shutdown() {
         channel.shutdown().awaitTermination(5, TimeUnit.SECONDS)
