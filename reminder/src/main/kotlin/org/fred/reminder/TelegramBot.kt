@@ -1,6 +1,9 @@
 package org.fred.reminder
 
 import org.apache.http.HttpHost
+import org.apache.http.auth.AuthScope
+import org.apache.http.auth.UsernamePasswordCredentials
+import org.apache.http.impl.client.BasicCredentialsProvider
 import org.springframework.stereotype.Service
 import org.telegram.telegrambots.api.methods.send.SendMessage
 import org.telegram.telegrambots.api.objects.Message
@@ -11,10 +14,16 @@ import org.telegram.telegrambots.exceptions.TelegramApiException
 
 
 @Service
-class ReminderBot() : TelegramLongPollingBot(DefaultBotOptions().apply { httpProxy = HttpHost("88.99.213.13", 3128) }) {
-    final val client:WhenClient
+class ReminderBot() : TelegramLongPollingBot(DefaultBotOptions().apply {
+    httpProxy = HttpHost("88.99.213.13", 3128)
+    credentialsProvider = BasicCredentialsProvider().apply {
+        setCredentials(AuthScope("88.99.213.13", 3128), UsernamePasswordCredentials("mkproxy", "58yGPatitCc7m3u9"))
+    }
+}) {
+    final val client: WhenClient
+
     init {
-        this.client = WhenClient("localhost", 50051)
+        this.client = WhenClient("when-srv-deployment", 50051)
     }
 
     override fun getBotToken(): String = "521757582:AAFx9NWGSU81cxH2l4eFPXNWtEm0nTfqxsg"
