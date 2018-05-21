@@ -8,9 +8,13 @@ import org.springframework.stereotype.Service
 import org.telegram.telegrambots.api.methods.send.SendMessage
 import org.telegram.telegrambots.api.objects.Message
 import org.telegram.telegrambots.api.objects.Update
+import org.telegram.telegrambots.api.objects.replykeyboard.InlineKeyboardMarkup
+import org.telegram.telegrambots.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import org.telegram.telegrambots.bots.DefaultBotOptions
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.exceptions.TelegramApiException
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 
 @Service
@@ -37,9 +41,28 @@ class ReminderBot() : TelegramLongPollingBot(DefaultBotOptions().apply {
         if (update.hasMessage() && update.getMessage().hasText()) {
             val parsed = client.parse(update.getMessage().text)
 
-            val message = SendMessage() // Create a SendMessage object with mandatory fields
-                    .setChatId(update.getMessage().chatId)
-                    .setText(parsed)
+            val message = if (parsed.startsWith("ERROR")) {
+                SendMessage()
+                        .setChatId(update.getMessage().chatId)
+                        .setText("Простите, я не понял что вы хотели этим сказать")
+            } else {
+                val parts = parsed.split('/')
+                val formatter = DateTimeFormatter.ISO_ZONED_DATE_TIME
+                val outFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+                val outFormatter1 = DateTimeFormatter.ofPattern("EEE")
+                val dt = formatter.parse(parts[0])
+
+                val inlineKb = InlineKeyboardMarkup()
+                val keyboardRow1 = mutableListOf(InlineKeyboardButton("Напомнить один раз ${outFormatter.format(dt)}"))
+                val keyboardRow2 = mutableListOf(InlineKeyboardButton("Напомнить каждый ${outFormatter1.format(dt)}"))
+                inlineKb.setKeyboard(mutableListOf(keyboardRow1, keyboardRow2))
+
+                SendMessage()
+                        .setChatId(update.getMessage().chatId)
+                        .setText(parsed)
+                        .setReplyMarkup(inlineKb)
+            }
+
             try {
                 execute<Message, SendMessage>(message) // Call method to send the message
             } catch (e: TelegramApiException) {
