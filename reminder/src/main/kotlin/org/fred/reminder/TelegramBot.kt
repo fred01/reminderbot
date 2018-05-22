@@ -5,6 +5,7 @@ import org.apache.http.auth.AuthScope
 import org.apache.http.auth.UsernamePasswordCredentials
 import org.apache.http.impl.client.BasicCredentialsProvider
 import org.springframework.stereotype.Service
+import org.telegram.telegrambots.api.methods.AnswerCallbackQuery
 import org.telegram.telegrambots.api.methods.send.SendMessage
 import org.telegram.telegrambots.api.objects.Message
 import org.telegram.telegrambots.api.objects.Update
@@ -38,6 +39,18 @@ class ReminderBot() : TelegramLongPollingBot(DefaultBotOptions().apply {
         if (update == null) {
             return
         }
+        if (update.hasCallbackQuery()) {
+            val answer = AnswerCallbackQuery()
+                    .setCallbackQueryId(update.callbackQuery.id)
+                    .setText("Ok, i'll remind you ${update.callbackQuery.data}!")
+            try {
+                execute<Boolean, AnswerCallbackQuery>(answer) // Call method to send the message
+            } catch (e: TelegramApiException) {
+                e.printStackTrace()
+            }
+
+        }
+
         if (update.hasMessage() && update.getMessage().hasText()) {
             val parsed = client.parse(update.getMessage().text)
 
