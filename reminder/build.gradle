@@ -1,7 +1,7 @@
 buildscript {
     ext {
         kotlinVersion = '1.2.41'
-        springBootVersion = '2.0.1.RELEASE'
+        springBootVersion = '2.0.2.RELEASE'
     }
     repositories {
         mavenCentral()
@@ -18,7 +18,6 @@ apply plugin: 'kotlin'
 apply plugin: 'kotlin-spring'
 apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
-apply plugin: 'com.google.protobuf'
 
 group = 'org.fred'
 version = '0.0.1-SNAPSHOT'
@@ -61,21 +60,5 @@ dependencies {
 dependencyManagement {
     imports {
         mavenBom "org.springframework.statemachine:spring-statemachine-bom:${springStatemachineVersion}"
-    }
-}
-
-protobuf {
-    protoc {
-        artifact = "com.google.protobuf:protoc:3.5.1-1"
-    }
-    plugins {
-        grpc {
-            artifact = 'io.grpc:protoc-gen-grpc-java:1.11.0'
-        }
-    }
-    generateProtoTasks {
-        all()*.plugins {
-            grpc {}
-        }
     }
 }

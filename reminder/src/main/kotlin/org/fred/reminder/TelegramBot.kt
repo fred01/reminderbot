@@ -50,12 +50,20 @@ class ReminderBot() : TelegramLongPollingBot(DefaultBotOptions().apply {
                 val formatter = DateTimeFormatter.ISO_ZONED_DATE_TIME
                 val outFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
                 val outFormatter1 = DateTimeFormatter.ofPattern("EEE")
+                val outFormatter2 = DateTimeFormatter.ofPattern("d")
                 val dt = formatter.parse(parts[0])
 
                 val inlineKb = InlineKeyboardMarkup()
-                val keyboardRow1 = mutableListOf(InlineKeyboardButton("Напомнить один раз ${outFormatter.format(dt)}"))
-                val keyboardRow2 = mutableListOf(InlineKeyboardButton("Напомнить каждый ${outFormatter1.format(dt)}"))
-                inlineKb.setKeyboard(mutableListOf(keyboardRow1, keyboardRow2))
+                val keyboardRow1 = mutableListOf(InlineKeyboardButton("Напомнить один раз ${outFormatter.format(dt)}").apply {
+                    callbackData = "remind once"
+                })
+                val keyboardRow2 = mutableListOf(InlineKeyboardButton("Напомнить каждый ${outFormatter1.format(dt)}").apply {
+                    callbackData = "remind weekly"
+                })
+                val keyboardRow3 = mutableListOf(InlineKeyboardButton("Напомнить ${outFormatter2.format(dt)} числа каждого месяца").apply {
+                    callbackData = "remind monthly"
+                })
+                inlineKb.setKeyboard(mutableListOf(keyboardRow1, keyboardRow2, keyboardRow3))
 
                 SendMessage()
                         .setChatId(update.getMessage().chatId)
