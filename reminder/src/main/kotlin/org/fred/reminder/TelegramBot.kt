@@ -49,12 +49,13 @@ class ReminderBot() : TelegramLongPollingBot(DefaultBotOptions().apply {
                 val parts = parsed.split('/')
                 val formatter = DateTimeFormatter.ISO_ZONED_DATE_TIME
                 val outFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-                val outFormatter1 = DateTimeFormatter.ofPattern("EEE")
+                val outFormatter1 = DateTimeFormatter.ofPattern("EEEE")
                 val outFormatter2 = DateTimeFormatter.ofPattern("d")
                 val dt = formatter.parse(parts[0])
 
                 val inlineKb = InlineKeyboardMarkup()
                 val keyboardRow1 = mutableListOf(InlineKeyboardButton("Напомнить один раз ${outFormatter.format(dt)}").apply {
+
                     callbackData = "remind once"
                 })
                 val keyboardRow2 = mutableListOf(InlineKeyboardButton("Напомнить каждый ${outFormatter1.format(dt)}").apply {
