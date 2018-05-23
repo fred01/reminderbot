@@ -10,9 +10,10 @@ interface ReminderRepository:MongoRepository<Reminder, String>
 data class Reminder (
         @Id
         val id:String,
+        val chatId:Long,
         val remindText:String,
         val remindDate:LocalDateTime,
-        val repeatMode: RepeatMode
+        val repeatMode: RepeatMode? = null
 )
 
 
