@@ -19,6 +19,7 @@ import org.telegram.telegrambots.exceptions.TelegramApiException
 @EnableMongoRepositories(basePackages = ["org.fred.reminder.persistence"])
 class ReminderApplication: CommandLineRunner {
     @Autowired lateinit var reminderBot: ReminderBot
+    @Autowired lateinit var objectMapper:ObjectMapper
 
     override fun run(vararg args: String?) {
         ApiContextInitializer.init()

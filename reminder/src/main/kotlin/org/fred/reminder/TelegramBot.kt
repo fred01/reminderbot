@@ -1,7 +1,6 @@
 package org.fred.reminder
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import org.apache.http.HttpHost
 import org.apache.http.auth.AuthScope
 import org.apache.http.auth.UsernamePasswordCredentials
@@ -48,7 +47,8 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
             return
         }
         if (update.hasCallbackQuery()) {
-            val callback = json.readValue<AnswerCallback>(update.callbackQuery.data)
+            val callbackParts = update.callbackQuery.data.split("|")
+            val callback = AnswerCallback(callbackParts[0], RepeatMode.valueOf(callbackParts[1]))
             val reminder = reminderRepository.findById(callback.id).orElseGet(null) ?: return
             val answerText = when (callback.mode) {
                 RepeatMode.ONCE -> "Ок, я напомню вам ${outFormatter.format(reminder.remindDate)} о ${reminder.remindText}"
@@ -91,9 +91,9 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
 
 
                 val inlineKb = InlineKeyboardMarkup()
-                val keyboardRow1 = mutableListOf(InlineKeyboardButton("Напомнить один раз ${outFormatter.format(dt)}").setCallbackData(json.writeValueAsString(json.writeValueAsString(AnswerCallback(reminderId, RepeatMode.ONCE)))))
-                val keyboardRow2 = mutableListOf(InlineKeyboardButton("Напомнить каждый ${weekDayFormatter.format(dt)}").setCallbackData(json.writeValueAsString(AnswerCallback(reminderId, RepeatMode.WEEKY)))                    )
-                val keyboardRow3 = mutableListOf(InlineKeyboardButton("Напомнить ${monthDayFormatter.format(dt)} числа каждого месяца").setCallbackData(json.writeValueAsString(AnswerCallback(reminderId, RepeatMode.MONTHLY))))
+                val keyboardRow1 = mutableListOf(InlineKeyboardButton("Напомнить один раз ${outFormatter.format(dt)}").setCallbackData("${reminderId}|${RepeatMode.ONCE}"))
+                val keyboardRow2 = mutableListOf(InlineKeyboardButton("Напомнить каждый ${weekDayFormatter.format(dt)}").setCallbackData("${reminderId}|${RepeatMode.WEEKY}")                    )
+                val keyboardRow3 = mutableListOf(InlineKeyboardButton("Напомнить ${monthDayFormatter.format(dt)} числа каждого месяца").setCallbackData("${reminderId}|${RepeatMode.MONTHLY}"))
 
                 inlineKb.keyboard = mutableListOf(keyboardRow1, keyboardRow2, keyboardRow3)
 

@@ -2,3 +2,4 @@ spring:
   data:
     mongodb:
       host: mongodb
+      database: remindbot
