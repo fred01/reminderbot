@@ -60,10 +60,10 @@ class SchedulerConfig {
 
 
     @Bean
-    fun shedulerCustomizer(): SchedulerFactoryBeanCustomizer {
+    fun shedulerCustomizer(jobFactory: JobFactory): SchedulerFactoryBeanCustomizer {
         return SchedulerFactoryBeanCustomizer() {schedulerFactoryBean ->
             LoggerFactory.getLogger(SchedulerConfig::class.java).info("Schedule factory customized")
-            schedulerFactoryBean.setJobFactory(autowiringJobFactory())
+            schedulerFactoryBean.setJobFactory(jobFactory)
         }
     }
 }
