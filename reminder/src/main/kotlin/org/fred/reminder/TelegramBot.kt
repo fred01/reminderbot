@@ -27,13 +27,14 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 
 class ReminderJob:Job {
+    @Suppress("SpringKotlinAutowiredMembers")
     @Autowired
     lateinit var sender:ReminderBot
 
     override fun execute(context: JobExecutionContext?) {
         if (context != null) {
-            val chatId = context.get("chatId") as Long
-            val message = context.get("message").toString()
+            val chatId = context.jobDetail.jobDataMap.get("chatId") as Long
+            val message = context.jobDetail.jobDataMap.get("message").toString()
             val sendMessage = SendMessage()
                     .setChatId(chatId)
                     .setText(message)
