@@ -1,12 +1,16 @@
 package org.fred.reminder
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import org.apache.http.HttpHost
 import org.apache.http.auth.AuthScope
 import org.apache.http.auth.UsernamePasswordCredentials
 import org.apache.http.impl.client.BasicCredentialsProvider
 import org.fred.reminder.persistence.Reminder
 import org.fred.reminder.persistence.ReminderRepository
+import org.quartz.Job
+import org.quartz.JobBuilder.newJob
+import org.quartz.JobExecutionContext
+import org.quartz.Scheduler
+import org.quartz.TriggerBuilder
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import org.telegram.telegrambots.api.methods.AnswerCallbackQuery
@@ -22,6 +26,26 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
 
+class ReminderJob:Job {
+    @Autowired
+    lateinit var sender:ReminderBot
+
+    override fun execute(context: JobExecutionContext?) {
+        if (context != null) {
+            val chatId = context.get("chatId") as Long
+            val message = context.get("message").toString()
+            val sendMessage = SendMessage()
+                    .setChatId(chatId)
+                    .setText(message)
+
+            try {
+                sender.execute<Message, SendMessage>(sendMessage)
+            } catch (e: TelegramApiException) {
+                e.printStackTrace()
+            }
+        }
+    }
+}
 
 @Service
 class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
@@ -29,8 +53,8 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
     credentialsProvider = BasicCredentialsProvider().apply {
         setCredentials(AuthScope("88.99.213.13", 3128), UsernamePasswordCredentials("mkproxy", "58yGPatitCc7m3u9"))
     }}) {
-    @Autowired lateinit var json: ObjectMapper
     @Autowired lateinit var reminderRepository: ReminderRepository
+    @Autowired lateinit var scheduler: Scheduler
 
     private final val client: WhenClient = WhenClient("when-srv-deployment", 50051)
     private final val russianLocale = Locale("ru", "RU")
@@ -59,6 +83,18 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
                     .setCallbackQueryId(update.callbackQuery.id)
                     .setText(answerText)
             reminderRepository.save(reminder.copy(repeatMode = callback.mode))
+            val trigger = TriggerBuilder.newTrigger()
+                    .withIdentity("reminderTrigger")
+                    .startAt(Date(Date().time + 10*1000)) // after 10 seconds
+                    .build()
+
+            val jobDetail = newJob().ofType(ReminderJob::class.java)
+                    .usingJobData("chatId", reminder.chatId)
+                    .usingJobData("message", reminder.remindText)
+                    .build()
+
+            scheduler.scheduleJob(jobDetail, trigger)
+
             try {
                 execute<Boolean, AnswerCallbackQuery>(answer)
             } catch (e: TelegramApiException) {

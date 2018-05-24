@@ -1,16 +1,19 @@
 package org.fred.reminder
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.module.SimpleModule
-import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import org.quartz.spi.TriggerFiredBundle
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.autoconfigure.quartz.SchedulerFactoryBeanCustomizer
 import org.springframework.boot.runApplication
+import org.springframework.context.ApplicationContext
+import org.springframework.context.ApplicationContextAware
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories
+import org.springframework.scheduling.quartz.SpringBeanJobFactory
 import org.telegram.telegrambots.ApiContextInitializer
 import org.telegram.telegrambots.TelegramBotsApi
 import org.telegram.telegrambots.exceptions.TelegramApiException
@@ -19,7 +22,6 @@ import org.telegram.telegrambots.exceptions.TelegramApiException
 @EnableMongoRepositories(basePackages = ["org.fred.reminder.persistence"])
 class ReminderApplication: CommandLineRunner {
     @Autowired lateinit var reminderBot: ReminderBot
-    @Autowired lateinit var objectMapper:ObjectMapper
 
     override fun run(vararg args: String?) {
         ApiContextInitializer.init()
@@ -33,15 +35,29 @@ class ReminderApplication: CommandLineRunner {
     }
 }
 
+class AutoWiringSpringBeanJobFactory: SpringBeanJobFactory(), ApplicationContextAware {
+    private lateinit var beanFactory: AutowireCapableBeanFactory
+
+    override fun setApplicationContext(applicationContext: ApplicationContext) {
+        beanFactory = applicationContext.autowireCapableBeanFactory
+    }
+
+    override fun createJobInstance(bundle: TriggerFiredBundle): Any {
+        val job = super.createJobInstance(bundle)
+        beanFactory.autowireBean(job)
+        return job
+    }
+}
+
+
 @Configuration
-class JacksonConfig {
-
+class SchedulerConfig {
     @Bean
-    fun kotlinModule(): SimpleModule = KotlinModule()
-
-    @Bean
-    fun jackson():ObjectMapper {
-        return jacksonObjectMapper()
+    fun shedulerCustomizer(): SchedulerFactoryBeanCustomizer {
+        return SchedulerFactoryBeanCustomizer() {schedulerFactoryBean ->
+            LoggerFactory.getLogger(SchedulerConfig::class.java).info("Schedule factory customized")
+            schedulerFactoryBean.setJobFactory(AutoWiringSpringBeanJobFactory())
+        }
     }
 }
 

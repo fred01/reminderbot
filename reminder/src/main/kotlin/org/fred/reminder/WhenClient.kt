@@ -38,7 +38,7 @@ class WhenClient(host: String, port: Int) {
 
     init {
         channel = ManagedChannelBuilder.forAddress(host, port)
-                .usePlaintext(true)
+                .usePlaintext()
                 .build()
         blockingStub = WhenGrpc.newBlockingStub(channel)
     }
