@@ -1,5 +1,6 @@
 package org.fred.reminder
 
+import org.quartz.spi.JobFactory
 import org.quartz.spi.TriggerFiredBundle
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -53,10 +54,16 @@ class AutoWiringSpringBeanJobFactory: SpringBeanJobFactory(), ApplicationContext
 @Configuration
 class SchedulerConfig {
     @Bean
+    fun autowiringJobFactory():JobFactory {
+        return AutoWiringSpringBeanJobFactory()
+    }
+
+
+    @Bean
     fun shedulerCustomizer(): SchedulerFactoryBeanCustomizer {
         return SchedulerFactoryBeanCustomizer() {schedulerFactoryBean ->
             LoggerFactory.getLogger(SchedulerConfig::class.java).info("Schedule factory customized")
-            schedulerFactoryBean.setJobFactory(AutoWiringSpringBeanJobFactory())
+            schedulerFactoryBean.setJobFactory(autowiringJobFactory())
         }
     }
 }
