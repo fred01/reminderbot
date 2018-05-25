@@ -6,6 +6,7 @@ import org.springframework.data.mongodb.repository.MongoRepository
 import java.time.LocalDateTime
 
 interface ReminderRepository:MongoRepository<Reminder, String>
+interface SettingsRepository:MongoRepository<Settings, Long>
 
 data class Reminder (
         @Id
@@ -16,5 +17,10 @@ data class Reminder (
         val repeatMode: RepeatMode? = null
 )
 
+data class Settings (
+    @Id
+    val chatId:Long,
+    val hoursDiff:Int
+)
 
 
