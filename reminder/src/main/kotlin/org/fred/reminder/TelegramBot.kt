@@ -81,7 +81,12 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
         val settings = settingsCache[chatId]
         return if (settings == null) {
             // cache miss, try get from DB
-            settingsRepository.findById(chatId).orElseGet(null)?.hoursDiff
+            val found = settingsRepository.findById(chatId)
+            if (found.isPresent) {
+                found.get().hoursDiff
+            } else {
+                null
+            }
         } else {
             settings.hoursDiff
         }
