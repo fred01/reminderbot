@@ -119,7 +119,7 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
                     .setText(answerText)
             if (callback.mode != RepeatMode.FORGOT) {
                 reminderRepository.save(reminder.copy(repeatMode = callback.mode))
-                val scheduleDate = Date((reminder.remindTimestamp + reminder.hoursDiff * 60 * 60)*1000)
+                val scheduleDate = Date((reminder.remindTimestamp)*1000)
                 val trigger = TriggerBuilder.newTrigger()
                         .startAt(scheduleDate)
                         .build()
@@ -132,7 +132,7 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
                 logger.info("scheduleJob for ${reminder.chatId} to ${SimpleDateFormat.getDateTimeInstance().format(scheduleDate)}")
 
                 scheduler.scheduleJob(jobDetail, trigger)
-                logger.info("Trigger will run at ${SimpleDateFormat.getDateTimeInstance().format(trigger.nextFireTime)}")
+                logger.info("Trigger will run at ${SimpleDateFormat.getDateTimeInstance().format(trigger.nextFireTime)}, now ${SimpleDateFormat.getDateTimeInstance().format(trigger.nextFireTime)}")
             }
 
             try {
