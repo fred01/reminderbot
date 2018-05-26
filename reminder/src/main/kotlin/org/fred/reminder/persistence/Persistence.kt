@@ -14,7 +14,9 @@ data class Reminder (
         val chatId:Long,
         val remindText:String,
         val remindDate:LocalDateTime,
-        val repeatMode: RepeatMode? = null
+        val repeatMode: RepeatMode? = null,
+        val remindTimestamp:Long,
+        val hoursDiff: Int
 )
 
 data class Settings (

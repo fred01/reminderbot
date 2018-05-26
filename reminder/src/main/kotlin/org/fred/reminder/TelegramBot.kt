@@ -13,6 +13,7 @@ import org.quartz.JobBuilder.newJob
 import org.quartz.JobExecutionContext
 import org.quartz.Scheduler
 import org.quartz.TriggerBuilder
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import org.telegram.telegrambots.api.methods.AnswerCallbackQuery
@@ -26,7 +27,9 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.exceptions.TelegramApiException
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoField
 import java.util.*
 
 class ReminderJob : Job {
@@ -34,14 +37,17 @@ class ReminderJob : Job {
     @Autowired
     lateinit var sender: ReminderBot
 
+    private val logger = LoggerFactory.getLogger(ReminderJob::class.java)
+
     override fun execute(context: JobExecutionContext?) {
         if (context != null) {
             val chatId = context.jobDetail.jobDataMap.get("chatId") as Long
             val message = context.jobDetail.jobDataMap.get("message").toString()
+
+            logger.info("Reminding $message to $chatId")
             val sendMessage = SendMessage()
                     .setChatId(chatId)
                     .setText(message)
-
             try {
                 sender.execute<Message, SendMessage>(sendMessage)
             } catch (e: TelegramApiException) {
@@ -58,6 +64,8 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
         setCredentials(AuthScope("88.99.213.13", 3128), UsernamePasswordCredentials("mkproxy", "58yGPatitCc7m3u9"))
     }
 }) {
+    private val logger = LoggerFactory.getLogger(ReminderBot::class.java)
+
     @Autowired
     lateinit var reminderRepository: ReminderRepository
     @Autowired
@@ -68,7 +76,7 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
     private final val client: WhenClient = WhenClient("when-srv-deployment", 50051)
     private final val russianLocale = Locale("ru", "RU")
     private final val parseFormatter = DateTimeFormatter.ISO_ZONED_DATE_TIME
-    private final val outFormatter = DateTimeFormatter.ofPattern("d LLLL yyyy", russianLocale)
+    private final val outFormatter = DateTimeFormatter.ofPattern("HH:mm d LLLL yyyy ", russianLocale)
     private final val weekDayFormatter = DateTimeFormatter.ofPattern("cccc", russianLocale)
     private final val monthDayFormatter = DateTimeFormatter.ofPattern("d", russianLocale)
 
@@ -104,22 +112,27 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
                 RepeatMode.ONCE -> "Ок, я напомню вам ${outFormatter.format(reminder.remindDate)} о ${reminder.remindText}"
                 RepeatMode.WEEKY -> "Буду напоминать каждый ${weekDayFormatter.format(reminder.remindDate)} о ${reminder.remindText}"
                 RepeatMode.MONTHLY -> "${monthDayFormatter.format(reminder.remindDate)} числа каждого месяца напомню о ${reminder.remindText}"
+                RepeatMode.FORGOT -> "Хорошо, забыли :)"
             }
             val answer = AnswerCallbackQuery()
                     .setCallbackQueryId(update.callbackQuery.id)
                     .setText(answerText)
-            reminderRepository.save(reminder.copy(repeatMode = callback.mode))
-            val trigger = TriggerBuilder.newTrigger()
-                    .withIdentity("reminderTrigger")
-                    .startAt(Date(Date().time + 10 * 1000)) // after 10 seconds
-                    .build()
+            if (callback.mode != RepeatMode.FORGOT) {
+                reminderRepository.save(reminder.copy(repeatMode = callback.mode))
+                val scheduleDate = Date(reminder.remindTimestamp + reminder.hoursDiff * 60 * 60)
+                val trigger = TriggerBuilder.newTrigger()
+                        .startAt(scheduleDate)
+                        .build()
 
-            val jobDetail = newJob().ofType(ReminderJob::class.java)
-                    .usingJobData("chatId", reminder.chatId)
-                    .usingJobData("message", reminder.remindText)
-                    .build()
+                val jobDetail = newJob().ofType(ReminderJob::class.java)
+                        .usingJobData("chatId", reminder.chatId)
+                        .usingJobData("message", reminder.remindText)
+                        .build()
 
-            scheduler.scheduleJob(jobDetail, trigger)
+                logger.info("scheduleJob for ${reminder.chatId} to ${outFormatter.format(LocalDateTime.ofEpochSecond(scheduleDate.time,0, ZoneOffset.UTC))}")
+
+                scheduler.scheduleJob(jobDetail, trigger)
+            }
 
             try {
                 execute<Boolean, AnswerCallbackQuery>(answer)
@@ -138,15 +151,22 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
                     val remoteHours = inputHours.toInt()
                     val myTime = LocalTime.now()
 
-                    val hoursDiff = remoteHours - myTime.hour
+                    val normalizedRemoteHour = if (remoteHours < myTime.hour) {
+                        remoteHours + 24
+                    } else {
+                        remoteHours
+                    }
+
+                    val hoursDiff = normalizedRemoteHour - myTime.hour
 
                     val s = settingsRepository.save(
                             Settings(update.message.chatId, hoursDiff)
                     )
+
                     settingsCache.put(update.message.chatId, s)
                     val message = SendMessage()
                             .setChatId(update.message.chatId)
-                            .setText("А у меня ${myTime.hour}, у нас с вами ${hoursDiff}")
+                            .setText("А у меня ${myTime.hour}, у нас с вами ${hoursDiff} часов разницы. Ну вот и познакомились :) Теперь можете просить меня напомнить что-нибудь, например 'позвонить через 10 минут' ")
                     try {
                         execute<Message, SendMessage>(message) // Call method to send the message
                     } catch (e: TelegramApiException) {
@@ -163,7 +183,8 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
                     }
                 }
             } else {
-                if (getHoursDiff(update.message.chatId) == null) {
+                val hoursDiff = getHoursDiff(update.message.chatId)
+                if (hoursDiff == null) {
                     val message = SendMessage()
                             .setChatId(update.message.chatId)
                             .setText("Простите, я не знаю вашу временную зону, а без нее я буду неправильно вам напоминать. Введите сообщение '${tzPrefix} ЧЧ', а вместо ЧЧ введите сколько у вас сейчас часов. Например '${tzPrefix} 12'. Вводите без кавычек :)")
@@ -184,24 +205,27 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
                         val dt = parseFormatter.parse(parts[0])
                         val dateMetionIndex = sourceText.indexOf(parts[1])
                         val reminderId = UUID.randomUUID().toString()
-                        reminderRepository.save(
+                        val r = reminderRepository.save(
                                 Reminder(
                                         id = reminderId,
                                         chatId = update.message.chatId,
                                         remindText = sourceText.removeRange(dateMetionIndex, dateMetionIndex + parts[1].length),
-                                        remindDate = LocalDateTime.from(dt)
+                                        remindDate = LocalDateTime.from(dt),
+                                        remindTimestamp = dt.getLong(ChronoField.INSTANT_SECONDS),
+                                        hoursDiff = hoursDiff
                                 )
                         )
                         val inlineKb = InlineKeyboardMarkup()
                         val keyboardRow1 = mutableListOf(InlineKeyboardButton("Напомнить один раз ${outFormatter.format(dt)}").setCallbackData("${reminderId}|${RepeatMode.ONCE}"))
                         val keyboardRow2 = mutableListOf(InlineKeyboardButton("Напомнить каждый ${weekDayFormatter.format(dt)}").setCallbackData("${reminderId}|${RepeatMode.WEEKY}"))
                         val keyboardRow3 = mutableListOf(InlineKeyboardButton("Напомнить ${monthDayFormatter.format(dt)} числа каждого месяца").setCallbackData("${reminderId}|${RepeatMode.MONTHLY}"))
+                        val keyboardRow4 = mutableListOf(InlineKeyboardButton("Я передумал, не напоминай мне об этом").setCallbackData("${reminderId}|${RepeatMode.FORGOT}"))
 
-                        inlineKb.keyboard = mutableListOf(keyboardRow1, keyboardRow2, keyboardRow3)
+                        inlineKb.keyboard = mutableListOf(keyboardRow1, keyboardRow2, keyboardRow3, keyboardRow4)
 
                         SendMessage()
                                 .setChatId(update.message.chatId)
-                                .setText(parsed)
+                                .setText("Вы просите напомнить ${r.remindText} в ${outFormatter.format(r.remindDate)}, давайте уточним как вам напомнить")
                                 .setReplyMarkup(inlineKb)
                     }
 
@@ -222,5 +246,5 @@ data class AnswerCallback(
 )
 
 enum class RepeatMode {
-    ONCE, WEEKY, MONTHLY
+    ONCE, WEEKY, MONTHLY, FORGOT
 }
