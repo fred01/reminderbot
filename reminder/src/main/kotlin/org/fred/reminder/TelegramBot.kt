@@ -130,9 +130,9 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
                         .build()
 
                 logger.info("scheduleJob for ${reminder.chatId} to ${SimpleDateFormat.getDateTimeInstance().format(scheduleDate)}")
-                logger.info("Trigger will run at ${SimpleDateFormat.getDateTimeInstance().format(trigger.nextFireTime)}")
 
                 scheduler.scheduleJob(jobDetail, trigger)
+                logger.info("Trigger will run at ${SimpleDateFormat.getDateTimeInstance().format(trigger.nextFireTime)}")
             }
 
             try {
