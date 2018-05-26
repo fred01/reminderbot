@@ -109,7 +109,7 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
             val callback = AnswerCallback(callbackParts[0], RepeatMode.valueOf(callbackParts[1]))
             val reminder = reminderRepository.findById(callback.id).orElseGet(null) ?: return
             val answerText = when (callback.mode) {
-                RepeatMode.ONCE -> "Ок, я напомню вам ${outFormatter.format(reminder.remindDate)} о ${reminder.remindText}"
+                RepeatMode.ONCE -> "Ок, я напомню вам ${outFormatter.format(reminder.remindDate.plusHours(reminder.hoursDiff.toLong()))} о ${reminder.remindText}"
                 RepeatMode.WEEKY -> "Буду напоминать каждый ${weekDayFormatter.format(reminder.remindDate)} о ${reminder.remindText}"
                 RepeatMode.MONTHLY -> "${monthDayFormatter.format(reminder.remindDate)} числа каждого месяца напомню о ${reminder.remindText}"
                 RepeatMode.FORGOT -> "Хорошо, забыли :)"
@@ -119,7 +119,7 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
                     .setText(answerText)
             if (callback.mode != RepeatMode.FORGOT) {
                 reminderRepository.save(reminder.copy(repeatMode = callback.mode))
-                val scheduleDate = Date(reminder.remindTimestamp + reminder.hoursDiff * 60 * 60)
+                val scheduleDate = Date(reminder.remindTimestamp + reminder.hoursDiff * 60 * 60*1000)
                 val trigger = TriggerBuilder.newTrigger()
                         .startAt(scheduleDate)
                         .build()
@@ -225,7 +225,7 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
 
                         SendMessage()
                                 .setChatId(update.message.chatId)
-                                .setText("Вы просите напомнить ${r.remindText} в ${outFormatter.format(r.remindDate)}, давайте уточним как вам напомнить")
+                                .setText("Вы просите напомнить ${r.remindText} в ${outFormatter.format(r.remindDate.plusHours(r.hoursDiff.toLong()))}, давайте уточним как вам напомнить")
                                 .setReplyMarkup(inlineKb)
                     }
 
