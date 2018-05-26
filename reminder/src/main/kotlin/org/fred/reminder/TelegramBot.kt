@@ -25,9 +25,9 @@ import org.telegram.telegrambots.api.objects.replykeyboard.buttons.InlineKeyboar
 import org.telegram.telegrambots.bots.DefaultBotOptions
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.exceptions.TelegramApiException
+import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoField
 import java.util.*
@@ -119,7 +119,7 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
                     .setText(answerText)
             if (callback.mode != RepeatMode.FORGOT) {
                 reminderRepository.save(reminder.copy(repeatMode = callback.mode))
-                val scheduleDate = Date(reminder.remindTimestamp + reminder.hoursDiff * 60 * 60*1000)
+                val scheduleDate = Date((reminder.remindTimestamp + reminder.hoursDiff * 60 * 60)*1000)
                 val trigger = TriggerBuilder.newTrigger()
                         .startAt(scheduleDate)
                         .build()
@@ -129,7 +129,7 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
                         .usingJobData("message", reminder.remindText)
                         .build()
 
-                logger.info("scheduleJob for ${reminder.chatId} to ${outFormatter.format(LocalDateTime.ofEpochSecond(scheduleDate.time,0, ZoneOffset.UTC))}")
+                logger.info("scheduleJob for ${reminder.chatId} to ${SimpleDateFormat.getDateTimeInstance().format(scheduleDate)}")
 
                 scheduler.scheduleJob(jobDetail, trigger)
             }
@@ -216,7 +216,7 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
                                 )
                         )
                         val inlineKb = InlineKeyboardMarkup()
-                        val keyboardRow1 = mutableListOf(InlineKeyboardButton("Напомнить один раз ${outFormatter.format(dt)}").setCallbackData("${reminderId}|${RepeatMode.ONCE}"))
+                        val keyboardRow1 = mutableListOf(InlineKeyboardButton("Напомнить один раз ${outFormatter.format(r.remindDate.plusHours(hoursDiff.toLong()))}").setCallbackData("${reminderId}|${RepeatMode.ONCE}"))
                         val keyboardRow2 = mutableListOf(InlineKeyboardButton("Напомнить каждый ${weekDayFormatter.format(dt)}").setCallbackData("${reminderId}|${RepeatMode.WEEKY}"))
                         val keyboardRow3 = mutableListOf(InlineKeyboardButton("Напомнить ${monthDayFormatter.format(dt)} числа каждого месяца").setCallbackData("${reminderId}|${RepeatMode.MONTHLY}"))
                         val keyboardRow4 = mutableListOf(InlineKeyboardButton("Я передумал, не напоминай мне об этом").setCallbackData("${reminderId}|${RepeatMode.FORGOT}"))
