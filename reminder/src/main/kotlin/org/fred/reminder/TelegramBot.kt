@@ -8,11 +8,8 @@ import org.fred.reminder.persistence.Reminder
 import org.fred.reminder.persistence.ReminderRepository
 import org.fred.reminder.persistence.Settings
 import org.fred.reminder.persistence.SettingsRepository
-import org.quartz.Job
+import org.quartz.*
 import org.quartz.JobBuilder.newJob
-import org.quartz.JobExecutionContext
-import org.quartz.Scheduler
-import org.quartz.TriggerBuilder
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
@@ -32,17 +29,34 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoField
 import java.util.*
 
+val russianLocale = Locale("ru", "RU")
+
+@Suppress("SpringKotlinAutowiredMembers")
 class ReminderJob : Job {
-    @Suppress("SpringKotlinAutowiredMembers")
     @Autowired
     lateinit var sender: ReminderBot
+    @Autowired
+    lateinit var reminderRepository: ReminderRepository
 
     private val logger = LoggerFactory.getLogger(ReminderJob::class.java)
 
     override fun execute(context: JobExecutionContext?) {
         if (context != null) {
+            val reminderId = context.jobDetail.jobDataMap.get("reminderId").toString()
             val chatId = context.jobDetail.jobDataMap.get("chatId") as Long
-            val message = context.jobDetail.jobDataMap.get("message").toString()
+            val reminderText = context.jobDetail.jobDataMap.get("message").toString()
+            val nextDate = context.nextFireTime
+            val message = "Напоминаю, вам нужно $reminderText" + if (nextDate != null) {
+                val nextDT = org.joda.time.LocalDateTime(nextDate.toInstant())
+                ". В следующий раз я напомню вам об этом ${nextDT.toString("HH:mm dd MMM yyyy" , russianLocale)}"
+            } else {
+                ""
+            }
+
+            if (nextDate == null) {
+                logger.info("Deleting $message of $chatId due no next time execution")
+                reminderRepository.deleteById(reminderId)
+            }
 
             logger.info("Reminding $message to $chatId")
             val sendMessage = SendMessage()
@@ -53,6 +67,8 @@ class ReminderJob : Job {
             } catch (e: TelegramApiException) {
                 e.printStackTrace()
             }
+
+
         }
     }
 }
@@ -74,11 +90,12 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
     lateinit var scheduler: Scheduler
 
     private final val client: WhenClient = WhenClient("when-srv-deployment", 50051)
-    private final val russianLocale = Locale("ru", "RU")
+
     private final val parseFormatter = DateTimeFormatter.ISO_ZONED_DATE_TIME
     private final val outFormatter = DateTimeFormatter.ofPattern("HH:mm d LLLL yyyy ", russianLocale)
     private final val weekDayFormatter = DateTimeFormatter.ofPattern("cccc", russianLocale)
     private final val monthDayFormatter = DateTimeFormatter.ofPattern("d", russianLocale)
+    private final val dateFormatter = DateTimeFormatter.ofPattern("HH:mm", russianLocale)
 
     val settingsCache = mutableMapOf<Long, Settings>()
 
@@ -111,7 +128,7 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
             val answerText = when (callback.mode) {
                 RepeatMode.ONCE -> "Ок, я напомню вам ${outFormatter.format(reminder.remindDate.plusHours(reminder.hoursDiff.toLong()))} о ${reminder.remindText}"
                 RepeatMode.WEEKY -> "Буду напоминать каждый ${weekDayFormatter.format(reminder.remindDate)} о ${reminder.remindText}"
-                RepeatMode.MONTHLY -> "${monthDayFormatter.format(reminder.remindDate)} числа каждого месяца напомню о ${reminder.remindText}"
+                RepeatMode.MONTHLY -> "${monthDayFormatter.format(reminder.remindDate)} числа каждого месяца в  напомню о ${reminder.remindText}"
                 RepeatMode.FORGOT -> "Хорошо, забыли :)"
             }
             val answer = AnswerCallbackQuery()
@@ -120,13 +137,26 @@ class ReminderBot : TelegramLongPollingBot(DefaultBotOptions().apply {
             if (callback.mode != RepeatMode.FORGOT) {
                 reminderRepository.save(reminder.copy(repeatMode = callback.mode))
                 val scheduleDate = Date((reminder.remindTimestamp)*1000)
-                val trigger = TriggerBuilder.newTrigger()
+                val triggerBuilder = TriggerBuilder.newTrigger()
                         .startAt(scheduleDate)
-                        .build()
+                if (reminder.repeatMode == RepeatMode.WEEKY) {
+                    triggerBuilder.withSchedule(
+                            CalendarIntervalScheduleBuilder.calendarIntervalSchedule().withIntervalInWeeks(1)
+                    )
+                }
+                if (reminder.repeatMode == RepeatMode.MONTHLY) {
+                    triggerBuilder.withSchedule(
+                            CalendarIntervalScheduleBuilder.calendarIntervalSchedule().withIntervalInMonths(1)
+                    )
+                }
+                val trigger = triggerBuilder.build()
 
                 val jobDetail = newJob().ofType(ReminderJob::class.java)
-                        .usingJobData("chatId", reminder.chatId)
-                        .usingJobData("message", reminder.remindText)
+                        .usingJobData(JobDataMap(mutableMapOf(
+                                "reminderId" to reminder.id,
+                                "chatId" to reminder.chatId,
+                                "message" to reminder.remindText
+                        )))
                         .build()
 
                 logger.info("scheduleJob for ${reminder.chatId} to ${SimpleDateFormat.getDateTimeInstance().format(scheduleDate)}")
