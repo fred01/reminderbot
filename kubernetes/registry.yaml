@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: registry
+  labels:
+    run: registry
+spec:
+  containers:
+  - name: registry
+    image: registry:2
+    ports:
+    - containerPort: 5000
+    volumeMounts:
+    - name: registry-persistent-storage
+      mountPath: /var/lib/registry
+  volumes:
+  - name: registry-persistent-storage
+    hostPath:
+      path: /var/container-data/registry
+      type: DirectoryOrCreate

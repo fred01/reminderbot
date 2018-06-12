@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: when-srv-deployment
+  labels:
+    app: when-srv
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: when-srv
+  template:
+    metadata:
+      labels:
+        app: when-srv
+    spec:
+      containers:
+      - name: when-srv
+        image: registry.fred.org.ru/when_srv:19
+        ports:
+        - containerPort: 50051

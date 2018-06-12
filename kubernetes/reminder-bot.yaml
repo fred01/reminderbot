@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reminder-bot-deployment
+  labels:
+    app: reminder-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reminder-bot
+  template:
+    metadata:
+      labels:
+        app: reminder-bot
+    spec:
+      containers:
+      - name: when-srv
+        image: registry.fred.org.ru/reminderbot:23
+        ports:
+        - containerPort: 8080
